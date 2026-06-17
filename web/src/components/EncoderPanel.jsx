@@ -1,5 +1,14 @@
 import React from 'react';
-import { labelForCode } from '../keycodes.js';
+import { labelForCode, colorForCode } from '../keycodes.js';
+
+function Slot({ label, code, onClick }) {
+  return (
+    <button className="enc-slot" style={{ '--accent-key': colorForCode(code) }} onClick={onClick}>
+      <span className="enc-dir">{label}</span>
+      <span className="key-label">{labelForCode(code)}</span>
+    </button>
+  );
+}
 
 export function EncoderPanel({ enc, onPick }) {
   return (
@@ -8,15 +17,12 @@ export function EncoderPanel({ enc, onPick }) {
       <div className="encoder-grid">
         {[0, 1].map((e) => (
           <div className="encoder" key={e}>
-            <div className="encoder-title">Encoder {e}</div>
-            <button className="enc-slot" onClick={() => onPick(e, 'ccw')}>
-              <span className="enc-dir">↺ CCW</span>
-              <span className="key-label">{labelForCode(enc[e][1])}</span>
-            </button>
-            <button className="enc-slot" onClick={() => onPick(e, 'cw')}>
-              <span className="enc-dir">CW ↻</span>
-              <span className="key-label">{labelForCode(enc[e][0])}</span>
-            </button>
+            <div className="encoder-title">
+              <span className="encoder-dial" aria-hidden="true" />
+              Encoder {e}
+            </div>
+            <Slot label="↺ CCW" code={enc[e][1]} onClick={() => onPick(e, 'ccw')} />
+            <Slot label="CW ↻" code={enc[e][0]} onClick={() => onPick(e, 'cw')} />
           </div>
         ))}
       </div>

@@ -1,8 +1,18 @@
-import React, { useMemo, useState } from 'react';
-import { KEYCODES, GROUPS } from '../keycodes.js';
+import React, { useEffect, useMemo, useState } from 'react';
+import { KEYCODES, GROUPS, GROUP_COLORS } from '../keycodes.js';
 
-export function KeycodePicker({ title, onSelect, onClose }) {
+export function KeycodePicker({ title, current, onSelect, onClose }) {
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -19,6 +29,7 @@ export function KeycodePicker({ title, onSelect, onClose }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2>{title}</h2>
+          <span className="modal-count">{filtered.length} keys</span>
           <button className="icon-btn" onClick={onClose}>
             ✕
           </button>
@@ -38,12 +49,16 @@ export function KeycodePicker({ title, onSelect, onClose }) {
             }
             return (
               <div className="picker-group" key={group}>
-                <div className="picker-group-title">{group}</div>
+                <div className="picker-group-title">
+                  <span className="group-dot" style={{ background: GROUP_COLORS[group] }} />
+                  {group}
+                </div>
                 <div className="picker-keys">
                   {items.map((k) => (
                     <button
                       key={k.code}
-                      className="picker-key"
+                      className={'picker-key' + (k.code === current ? ' current' : '')}
+                      style={{ '--accent-key': GROUP_COLORS[group] }}
                       title={k.mnemonic}
                       onClick={() => onSelect(k.code)}
                     >

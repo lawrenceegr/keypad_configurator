@@ -15,6 +15,17 @@ export function App() {
   const [pressed, setPressed] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+
+  const showToast = useCallback((text) => {
+    setToast(text);
+    if (toastTimer.current) {
+      clearTimeout(toastTimer.current);
+    }
+    toastTimer.current = setTimeout(() => setToast(null), 2400);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -28,6 +39,7 @@ export function App() {
     const res = await serial.send({ cmd: 'get_keymap' });
     if (res.ok) {
       setKeymap({ keys: res.keys, enc: res.enc, version: res.version });
+      setDirty(false);
     }
   }, []);
 
@@ -91,6 +103,7 @@ export function App() {
               keys[target.pos] = code;
               return { ...m, keys };
             });
+            setDirty(true);
           } else {
             setError(res.err);
           }
@@ -107,6 +120,7 @@ export function App() {
               enc[target.enc][target.dir === 'cw' ? 0 : 1] = code;
               return { ...m, enc };
             });
+            setDirty(true);
           } else {
             setError(res.err);
           }
@@ -127,7 +141,10 @@ export function App() {
     setError(null);
     try {
       const res = await serial.send({ cmd: 'save' });
-      if (!res.ok) {
+      if (res.ok) {
+        setDirty(false);
+        showToast('Saved to device');
+      } else {
         setError(res.err);
       }
     } catch (e) {
@@ -135,7 +152,7 @@ export function App() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [showToast]);
 
   const handleReset = useCallback(async () => {
     const serial = serialRef.current;
@@ -147,12 +164,13 @@ export function App() {
     try {
       await serial.send({ cmd: 'reset' });
       await loadKeymap(serial);
+      showToast('Defaults restored — Save to persist');
     } catch (e) {
       setError(e.message);
     } finally {
       setBusy(false);
     }
-  }, [loadKeymap]);
+  }, [loadKeymap, showToast]);
 
   const pickerTitle =
     picker && picker.kind === 'key'
@@ -160,6 +178,14 @@ export function App() {
       : picker
       ? 'Encoder ' + picker.enc + ' · ' + picker.dir.toUpperCase()
       : '';
+
+  let pickerCurrent = null;
+  if (picker && keymap) {
+    pickerCurrent =
+      picker.kind === 'key'
+        ? keymap.keys[picker.pos]
+        : keymap.enc[picker.enc][picker.dir === 'cw' ? 0 : 1];
+  }
 
   return (
     <div className="app">
@@ -204,10 +230,17 @@ export function App() {
           <KeyGrid keys={keymap.keys} pressed={pressed} onPick={(pos) => setPicker({ kind: 'key', pos })} />
           <EncoderPanel enc={keymap.enc} onPick={(enc, dir) => setPicker({ kind: 'enc', enc, dir })} />
           <div className="actions">
+            <span className={'dirty-flag' + (dirty ? ' on' : '')}>
+              {dirty ? 'Unsaved changes' : 'All changes saved'}
+            </span>
             <button className="btn" disabled={busy} onClick={handleReset}>
               Reset to defaults
             </button>
-            <button className="btn primary" disabled={busy} onClick={handleSave}>
+            <button
+              className={'btn primary' + (dirty ? ' pulse' : '')}
+              disabled={busy || !dirty}
+              onClick={handleSave}
+            >
               Save to device
             </button>
           </div>
@@ -216,13 +249,22 @@ export function App() {
         <div className="notice">Loading keymap…</div>
       ) : (
         <div className="empty">
+          <span className="empty-glyph">⌨</span>
           <p>Connect your keypad to start remapping.</p>
+          <p className="empty-hint">Live changes apply instantly — no reflash.</p>
         </div>
       )}
 
       {picker && (
-        <KeycodePicker title={pickerTitle} onSelect={handleSelect} onClose={() => setPicker(null)} />
+        <KeycodePicker
+          title={pickerTitle}
+          current={pickerCurrent}
+          onSelect={handleSelect}
+          onClose={() => setPicker(null)}
+        />
       )}
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
