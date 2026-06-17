@@ -1,0 +1,3 @@
+[submodule "zmk-config-keypad"]
+	path = zmk-config-keypad
+	url = git@github.com:lawrenceegr/zmk-config-keypad.git
