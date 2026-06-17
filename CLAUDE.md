@@ -244,9 +244,22 @@ On connect: send `hello`, then `get_keymap`, render from the response. Consult t
 
 ## Build / flash / test loop
 
-- **Build:** local `west build` against the pinned ZMK revision (`v0.3`) for the
-  `rpi_pico` + `keypad` shield. Output `zmk.uf2`. CI builds via the ZMK
-  `build-user-config` workflow on push to the submodule remote.
+- **Local build** (verified working). The custom C lives at the submodule root as a Zephyr
+  module, so the repo root must be passed as an extra module — `ZMK_CONFIG` alone is not
+  enough. Build against the local ZMK workspace at `~/zmk`:
+  ```
+  cd ~/zmk && source .venv/bin/activate && cd app
+  west build -b rp2040_zero -d keypad -- \
+    -DSHIELD=keypad \
+    -DZMK_CONFIG="/home/marcus/keyboards-firmware/keypad_configurator/zmk-config-keypad/config" \
+    -DZMK_EXTRA_MODULES="/home/marcus/keyboards-firmware/keypad_configurator/zmk-config-keypad"
+  ```
+  `-DSHIELD` and `-DZMK_CONFIG` must come **after** `--` (they are CMake args, not west
+  args). Output: `~/zmk/app/keypad/zephyr/zmk.uf2`.
+- **Board targets differ:** local builds use `rp2040_zero`; CI (`build.yaml`) builds
+  `rpi_pico`. Both are RP2040 and the module code is board-agnostic, but flash the UF2 that
+  matches the board in hand. Keep CI aligned with the real hardware.
+- CI builds via the ZMK `build-user-config` workflow on push to the submodule remote.
 - **Flash:** BOOTSEL → drag-and-drop UF2 (standard RP2040 path).
 - **Test round-trip:**
   1. Open the web app in Chrome/Edge, connect, confirm `hello` identity.
