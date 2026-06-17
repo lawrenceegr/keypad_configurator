@@ -256,9 +256,10 @@ On connect: send `hello`, then `get_keymap`, render from the response. Consult t
   ```
   `-DSHIELD` and `-DZMK_CONFIG` must come **after** `--` (they are CMake args, not west
   args). Output: `~/zmk/app/keypad/zephyr/zmk.uf2`.
-- **Board targets differ:** local builds use `rp2040_zero`; CI (`build.yaml`) builds
-  `rpi_pico`. Both are RP2040 and the module code is board-agnostic, but flash the UF2 that
-  matches the board in hand. Keep CI aligned with the real hardware.
+- **Real hardware is `rpi_pico`** — CI (`build.yaml`) builds it and that is the UF2 to
+  flash. `rp2040_zero` is just a convenient bring-up target for local compile checks; both
+  are RP2040 and the module code is board-agnostic. Build whichever locally by swapping
+  `-b`; both are verified to compile.
 - CI builds via the ZMK `build-user-config` workflow on push to the submodule remote.
 - **Flash:** BOOTSEL → drag-and-drop UF2 (standard RP2040 path).
 - **Test round-trip:**
