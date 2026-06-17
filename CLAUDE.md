@@ -219,8 +219,22 @@ ZMK shield/board module (out-of-tree), in the `zmk-config-keypad/` submodule:
 
 ## Web app
 
-Plain React + Vite, static, Chromium-only (WebSerial). No backend, no browser storage APIs
-— keep all state in React state.
+Lives in `web/` (plain React + Vite, JSX, no backend, Chromium-only WebSerial). Run it with
+`cd web && npm install && npm run dev`, then open the dev URL in Chrome/Edge and Connect.
+
+- `src/serial.js` — `KeypadSerial`: connect/disconnect, `send(cmd)` (id + promise + timeout),
+  reader loop splitting on `\n`, `onEvent`/`onClose` listeners.
+- `src/keycodes_data.js` — **generated** by `tools/gen_keycodes.c` from ZMK's `keys.h`, so the
+  32-bit codes match the firmware exactly (no drift). Regenerate with `npm run gen:keycodes`
+  (needs the local ZMK at `~/zmk`); the generated file is committed so the app builds without it.
+- `src/keycodes.js` — catalog lookup/labels; `src/App.jsx` + `src/components/` — UI.
+
+The firmware-side `evt:key` async highlight is **not yet emitted** by the firmware; the web app
+already listens for it (cells highlight on `{"evt":"key",...}`), so wiring it up is firmware-only
+work. It is the cleanest way to confirm the physical-key → position-index mapping (e.g. the
+encoder-button 8/9 order).
+
+Original design notes below.
 
 - **Connection manager** — `navigator.serial.requestPort()`, open, expose
   connected/disconnected state. Reconnect button.
