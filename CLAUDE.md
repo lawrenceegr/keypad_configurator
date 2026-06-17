@@ -246,20 +246,29 @@ On connect: send `hello`, then `get_keymap`, render from the response. Consult t
 
 - **Local build** (verified working). The custom C lives at the submodule root as a Zephyr
   module, so the repo root must be passed as an extra module — `ZMK_CONFIG` alone is not
-  enough. Build against the local ZMK workspace at `~/zmk`:
+  enough. The module pulls ZMK's private `app/include` onto its own library include path
+  via `${APPLICATION_SOURCE_DIR}/include` in `CMakeLists.txt` (without it, `zmk/*.h`,
+  `drivers/behavior.h`, and `dt-bindings/zmk/keys.h` won't resolve). Build against the
+  local ZMK workspace at `~/zmk`:
   ```
   cd ~/zmk && source .venv/bin/activate && cd app
-  west build -b rp2040_zero -d keypad -- \
+  west build -b rpi_pico -d keypad_pico -- \
     -DSHIELD=keypad \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     -DZMK_CONFIG="/home/marcus/keyboards-firmware/keypad_configurator/zmk-config-keypad/config" \
     -DZMK_EXTRA_MODULES="/home/marcus/keyboards-firmware/keypad_configurator/zmk-config-keypad"
   ```
-  `-DSHIELD` and `-DZMK_CONFIG` must come **after** `--` (they are CMake args, not west
-  args). Output: `~/zmk/app/keypad/zephyr/zmk.uf2`.
+  Everything after `--` is a CMake arg (must follow `--`, not precede it). Output:
+  `~/zmk/app/keypad_pico/zephyr/zmk.uf2`.
 - **Real hardware is `rpi_pico`** — CI (`build.yaml`) builds it and that is the UF2 to
-  flash. `rp2040_zero` is just a convenient bring-up target for local compile checks; both
-  are RP2040 and the module code is board-agnostic. Build whichever locally by swapping
-  `-b`; both are verified to compile.
+  flash. `rp2040_zero` works too (swap `-b`, use a different `-d` dir) as a bring-up
+  target; both are RP2040 and the module code is board-agnostic; both are verified to
+  compile.
+- **IDE integration:** `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` writes
+  `~/zmk/app/keypad_pico/compile_commands.json`, which `.vscode/c_cpp_properties.json`
+  points the C/C++ extension at so includes resolve in the editor. Re-run the build after
+  adding new source files to refresh it. The `.vscode` config holds absolute machine paths
+  and is git-ignored.
 - CI builds via the ZMK `build-user-config` workflow on push to the submodule remote.
 - **Flash:** BOOTSEL → drag-and-drop UF2 (standard RP2040 path).
 - **Test round-trip:**
